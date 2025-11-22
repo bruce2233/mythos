@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神话艺术图鉴 | MYTHOS ART NOUVEAU</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入更有艺术感的字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --c-spades: #1e3a8a;   /* 靛蓝/夜空 */
+            --c-hearts: #0d9488;   /* 绿松石/深海 (红心对应深渊) */
+            --c-clubs: #3f6212;    /* 橄榄绿/密林 */
+            --c-diamonds: #b45309; /* 赤陶/山峦 */
+        }
+
+        body {
+            background-color: #050505;
+            font-family: 'Playfair Display', serif;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .font-art { font-family: 'Cinzel Decorative', cursive; }
+
+        /* 纹理背景 */
+        .bg-texture {
+            position: fixed; inset: 0; z-index: -1;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+
+        /* 3D 卡牌样式 */
+        .card-wrapper { perspective: 1500px; }
+        .game-card {
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease;
+            will-change: transform;
+            background: #111;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+        }
+
+        /* 3D 层级 */
+        .z-level-1 { transform: translateZ(15px); }
+        .z-level-2 { transform: translateZ(30px); }
+        .z-level-3 { transform: translateZ(45px); }
+
+        /* 阵营配色 & 渐变 */
+        .theme-spades { --main: var(--c-spades); --grad: linear-gradient(160deg, #020617 0%, #172554 100%); }
+        .theme-hearts { --main: var(--c-hearts); --grad: linear-gradient(160deg, #042f2e 0%, #115e59 100%); }
+        .theme-clubs { --main: var(--c-clubs); --grad: linear-gradient(160deg, #14532d 0%, #365314 100%); }
+        .theme-diamonds { --main: var(--c-diamonds); --grad: linear-gradient(160deg, #451a03 0%, #78350f 100%); }
+
+        .game-card { background: var(--grad); }
+        .game-card::before { /* 金色/装饰边框模拟 */
+            content: ''; position: absolute; inset: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px; pointer-events: none;
+        }
+
+        .game-card:hover {
+            box-shadow: 0 0 30px -5px var(--main);
+            border-color: var(--main);
+        }
+
+        /* 描述文字样式优化 */
+        .desc-text {
+            text-align: justify;
+            text-justify: inter-word;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div class="bg-texture"></div>
+
+    <!-- 顶部 -->
+    <header class="py-12 text-center relative z-10 bg-gradient-to-b from-black/80 to-transparent">
+        <h1 class="text-4xl md:text-6xl font-art font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-200 drop-shadow-sm mb-2">
+            MYTHOS & ART
+        </h1>
+        <p class="text-amber-500/60 tracking-[0.3em] text-xs uppercase font-semibold">The Art Nouveau Collection</p>
+    </header>
+
+    <!-- 过滤器 -->
+    <nav class="flex justify-center gap-2 md:gap-6 mb-10 px-4 flex-wrap z-20 relative">
+        <button onclick="filter('all')" class="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs tracking-widest transition-all active:scale-95">ALL</button>
+        <button onclick="filter('spades')" class="px-5 py-2 bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500/20 text-blue-200 rounded-full text-xs tracking-widest transition-all"><i class="fa-solid fa-crow mr-2"></i>SKY</button>
+        <button onclick="filter('hearts')" class="px-5 py-2 bg-teal-950/40 hover:bg-teal-900/60 border border-teal-500/20 text-teal-200 rounded-full text-xs tracking-widest transition-all"><i class="fa-solid fa-water mr-2"></i>ABYSS</button>
+        <button onclick="filter('clubs')" class="px-5 py-2 bg-green-950/40 hover:bg-green-900/60 border border-green-500/20 text-green-200 rounded-full text-xs tracking-widest transition-all"><i class="fa-solid fa-tree mr-2"></i>FOREST</button>
+        <button onclick="filter('diamonds')" class="px-5 py-2 bg-orange-950/40 hover:bg-orange-900/60 border border-orange-500/20 text-orange-200 rounded-full text-xs tracking-widest transition-all"><i class="fa-solid fa-mountain mr-2"></i>MOUNTAIN</button>
+    </nav>
+
+    <!-- 卡牌容器 -->
+    <main class="container mx-auto px-4 pb-24">
+        <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 justify-items-center">
+            <!-- Cards injected by JS -->
+        </div>
+    </main>
+
+    <script>
+        // ==========================================================================
+        // 核心数据配置 - 已根据您的详细描述进行更新
+        // 修正了 SpadesK 的文件名
+        // 修正了 Hearts 的深渊主题 (原本通常红心是火，这里根据您的设定设为深渊/水/虹彩)
+        // ==========================================================================
+        const cards = [
+            // --- SPADES (黑桃) - 苍穹领域 (Sky Realm) ---
+            // 风格：古斯塔夫·克里姆特 (Klimt)
+            {
+                file: "img/SpadesK.png",
+                suit: "spades", rank: "K",
+                name: "ZEUS", title: "King of Gods",
+                style: "Gustav Klimt Style",
+                desc: "威严地坐在奥林匹斯山巅。长袍如克里姆特的织毯，布满宇宙星云。手持纯金箔质感的锯齿状闪电。",
+                tags: ["Klimt", "Gold", "Lightning"]
+            },
+            {
+                file: "img/SpadesQ.png",
+                suit: "spades", rank: "Q",
+                name: "HERA", title: "Queen of Gods",
+                style: "Art Nouveau",
+                desc: "高贵庄重，身旁是圣物孔雀，尾羽如金色螺旋。长裙装饰星辰与石榴，充满神圣感。",
+                tags: ["Divine", "Peacock", "Stars"]
+            },
+            {
+                file: "img/SpadesJ.png",
+                suit: "spades", rank: "J",
+                name: "ASTRAEUS", title: "God of Dusk",
+                style: "Vienna Secession",
+                desc: "年轻长翼的侧面形象，手持几何风格星盘。将象征星辰的光之种子撒向深靛蓝色的夜空。",
+                tags: ["Stars", "Dusk", "Geometry"]
+            },
+            {
+                file: "img/SpadesA.png",
+                suit: "spades", rank: "A",
+                name: "CELESTIAL ESSENCE", title: "The Source",
+                style: "Cosmic Mosaic",
+                desc: "巨大的符号拼贴画。由金色螺旋与银色方块构成，放射光芒与闪电，如同一件神圣的宇宙圣物。",
+                tags: ["Mosaic", "Spiral", "Sky"]
+            },
+
+            // --- HEARTS (红心) - 深渊领域 (Abyss Realm) ---
+            // 风格：勒内·拉利克 / 蒂芙尼 (Lalique / Tiffany)
+            {
+                file: "img/HeartsK.png",
+                suit: "hearts", rank: "K",
+                name: "POSEIDON", title: "God of the Sea",
+                style: "Tiffany Glass",
+                desc: "手持虹彩光泽的三叉戟，坐在活珊瑚宝座上。胡须如海浪流动，周围环绕虹彩玻璃质感的鱼群。",
+                tags: ["Iridescent", "Sea", "Coral"]
+            },
+            {
+                file: "img/HeartsQ.png",
+                suit: "hearts", rank: "Q",
+                name: "AMPHITRITE", title: "Queen of the Sea",
+                style: "René Lalique",
+                desc: "从浪花中优雅升起，呈现半透明和蛋白石般的柔和光泽。长发与海藻、珍珠缠绕。",
+                tags: ["Translucent", "Pearls", "Waves"]
+            },
+            {
+                file: "img/HeartsJ.png",
+                suit: "hearts", rank: "J",
+                name: "TRITON", title: "Sea Messenger",
+                style: "Fluid Motion",
+                desc: "强壮的人鱼吹响螺旋海螺。声音化为“鞭线”曲线激起涟漪，强调肌肉的动态美。",
+                tags: ["Conch", "Ripple", "Muscle"]
+            },
+            {
+                file: "img/HeartsA.png",
+                suit: "hearts", rank: "A",
+                name: "ABYSSAL ESSENCE", title: "Deep Core",
+                style: "Tiffany Iridescent",
+                desc: "巨大的红心符号，蒂芙尼虹彩玻璃质感，内部流动变幻色彩。被波浪鞭线与光之气泡环绕。",
+                tags: ["Glass", "Bubbles", "Flow"]
+            },
+
+            // --- CLUBS (梅花) - 密林领域 (Forest Realm) ---
+            // 风格：埃米尔·加莱 / 南锡学派 (Émile Gallé)
+            {
+                file: "img/ClubsK.png",
+                suit: "clubs", rank: "K",
+                name: "PAN", title: "God of the Wild",
+                style: "Nancy School",
+                desc: "栖身长满苔藓的古木，吹奏排箫。背景是层次极为丰富的密林，注重表现树皮与苔藓质感。",
+                tags: ["Wild", "Moss", "Nature"]
+            },
+            {
+                file: "img/ClubsQ.png",
+                suit: "clubs", rank: "Q",
+                name: "ARTEMIS", title: "Goddess of Hunt",
+                style: "Cameo Glass",
+                desc: "林中大步前行，手持弓箭，额戴新月。风格如同埃米尔·加莱的多层套色玻璃艺术品。",
+                tags: ["Hunt", "Deer", "Glass"]
+            },
+            {
+                file: "img/ClubsJ.png",
+                suit: "clubs", rank: "J",
+                name: "CERNUNNOS", title: "Horned God",
+                style: "Celtic Nature",
+                desc: "盘腿而坐的鹿角神，颈戴金属项圈。蛇与鹿伴其左右，代表森林最深处的神秘核心。",
+                tags: ["Celtic", "Horned", "Ancient"]
+            },
+            {
+                file: "img/ClubsA.png",
+                suit: "clubs", rank: "A",
+                name: "SYLVAN ESSENCE", title: "Forest Soul",
+                style: "Marquetry",
+                desc: "梅花符号从底部生长，茎是古老树干。模仿木材镶嵌艺术，充满精细的叶脉与藤蔓细节。",
+                tags: ["Wood", "Roots", "Life"]
+            },
+
+            // --- DIAMONDS (方块) - 山峦领域 (Mountain Realm) ---
+            // 风格：安东尼·高迪 / 奥伯利·比亚兹莱 (Gaudí / Beardsley)
+            {
+                file: "img/DiamondsK.png",
+                suit: "diamonds", rank: "K",
+                name: "HEPHAESTUS", title: "God of Forge",
+                style: "Gaudí Organic",
+                desc: "跛足强壮的工匠神，站在火山洞穴铁砧旁。背景是高迪风格的有机石柱，铁锤迸发金色火花。",
+                tags: ["Forge", "Fire", "Stone"]
+            },
+            {
+                file: "img/DiamondsQ.png",
+                suit: "diamonds", rank: "Q",
+                name: "GAIA", title: "Mother Earth",
+                style: "Beardsley Line",
+                desc: "斜躺的宏伟女性，身体即地貌。比亚兹莱式的高对比度纯黑线条，突出雕塑感。",
+                tags: ["Earth", "Lines", "Contrast"]
+            },
+            {
+                file: "img/DiamondsJ.png",
+                suit: "diamonds", rank: "J",
+                name: "OUREA", title: "Mountain God",
+                style: "Trencadís Mosaic",
+                desc: "岩石构成的粗犷巨人从峭壁浮现。身体表面呈现高迪式碎瓷砖马赛克纹理。",
+                tags: ["Rock", "Mosaic", "Giant"]
+            },
+            {
+                file: "img/DiamondsA.png",
+                suit: "diamonds", rank: "A",
+                name: "MOUNTAIN ESSENCE", title: "Crystal Core",
+                style: "Geo Structure",
+                desc: "巨大的水晶符号，锐利线条充满比亚兹莱式美感。镶嵌在高迪风格流动的岩石地层中。",
+                tags: ["Crystal", "Gold", "Sharp"]
+            }
+        ];
+
+        // ==========================================
+        // 渲染引擎
+        // ==========================================
+        const grid = document.getElementById('grid');
+
+        function render(dataset) {
+            grid.innerHTML = '';
+            dataset.forEach(c => {
+                // 定义图标
+                let icon = 'fa-shapes';
+                if(c.suit === 'spades') icon = 'fa-feather-pointed'; // 鹰羽/天空
+                if(c.suit === 'hearts') icon = 'fa-water';           // 水/深渊
+                if(c.suit === 'clubs') icon = 'fa-tree';             // 树/密林
+                if(c.suit === 'diamonds') icon = 'fa-gem';           // 水晶/山峦
+
+                const el = document.createElement('div');
+                el.className = `card-wrapper w-full max-w-[280px] h-[440px] cursor-pointer group`;
+                el.innerHTML = `
+                    <div class="game-card theme-${c.suit} relative w-full h-full rounded-xl overflow-hidden text-gray-200 flex flex-col">
+                        <!-- 动态光效 -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-50 mix-blend-overlay pointer-events-none"></div>
+                        
+                        <!-- 顶部信息 -->
+                        <div class="z-level-2 relative p-4 flex justify-between items-start border-b border-white/5 bg-black/20 backdrop-blur-sm">
+                            <div>
+                                <h2 class="text-xl font-art font-bold leading-none tracking-wider text-white">${c.name}</h2>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1">${c.title}</p>
+                            </div>
+                            <div class="flex flex-col items-center text-white/80">
+                                <span class="font-serif text-2xl font-bold leading-none">${c.rank}</span>
+                                <i class="fa-solid ${icon} text-[10px] mt-1"></i>
+                            </div>
+                        </div>
+
+                        <!-- 图片区域 -->
+                        <div class="z-level-1 absolute inset-0 top-[60px] bottom-[110px] bg-black/50">
+                            <img src="${c.file}" alt="${c.name}" 
+                                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:contrast-110"
+                                onerror="this.src='https://placehold.co/300x400/222/FFF?text=${c.name}'">
+                            <!-- 艺术风格滤镜遮罩 -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#000] via-transparent to-transparent"></div>
+                        </div>
+
+                        <!-- 底部描述 -->
+                        <div class="z-level-3 mt-auto relative p-4 bg-gradient-to-t from-black via-black/90 to-transparent">
+                            <div class="flex gap-2 mb-2 flex-wrap">
+                                ${c.tags.map(t => `<span class="text-[9px] border border-white/20 px-1.5 py-0.5 rounded text-white/60 uppercase tracking-wide">${t}</span>`).join('')}
+                            </div>
+                            <p class="text-[11px] leading-relaxed text-gray-300 font-light desc-text border-l-2 border-white/20 pl-2">
+                                ${c.desc}
+                            </p>
+                            <div class="mt-2 text-[9px] text-right text-white/30 italic font-serif">
+                                Style: ${c.style}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(el);
+                initTilt(el);
+            });
+        }
+
+        // 3D 倾斜逻辑
+        function initTilt(wrapper) {
+            const card = wrapper.querySelector('.game-card');
+            wrapper.addEventListener('mousemove', (e) => {
+                const rect = wrapper.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const cx = rect.width / 2;
+                const cy = rect.height / 2;
+                
+                // 旋转幅度
+                const rx = ((y - cy) / cy) * -12;
+                const ry = ((x - cx) / cx) * 12;
+
+                card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.02)`;
+            });
+
+            wrapper.addEventListener('mouseleave', () => {
+                card.style.transform = `rotateX(0) rotateY(0) scale(1)`;
+            });
+        }
+
+        function filter(type) {
+            if(type === 'all') render(cards);
+            else render(cards.filter(c => c.suit === type));
+        }
+
+        // 启动
+        render(cards);
+    </script>
+</body>
+</html>
