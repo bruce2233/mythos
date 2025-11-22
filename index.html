@@ -30,15 +30,19 @@
             background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
         }
 
+        /* 基础卡牌样式 */
         .card-wrapper { perspective: 1500px; }
         .game-card {
             transform-style: preserve-3d;
             transition: transform 0.1s ease-out, box-shadow 0.3s ease;
             will-change: transform;
             background: #111;
-            /* 极细的边框，增加质感但不占空间 */
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
+        }
+        .game-card:hover {
+            box-shadow: 0 0 30px -5px var(--main);
+            border-color: var(--main);
         }
 
         .theme-spades { --main: var(--c-spades); }
@@ -46,13 +50,78 @@
         .theme-clubs { --main: var(--c-clubs); }
         .theme-diamonds { --main: var(--c-diamonds); }
 
-        .game-card:hover {
-            box-shadow: 0 0 30px -5px var(--main);
-            border-color: var(--main);
-        }
-        
         .z-level-img { transform: translateZ(10px); }
         .z-level-text { transform: translateZ(30px); }
+
+        /* --- 模态框与3D旋转相关样式 --- */
+        #modal-overlay {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #modal-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        .modal-perspective {
+            perspective: 2000px;
+        }
+
+        /* 3D 旋转容器 */
+        .rotate-card-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: spin-slow 8s infinite linear;
+        }
+        
+        /* 鼠标悬停时暂停旋转，方便查看细节 */
+        .rotate-card-container:hover {
+            animation-play-state: paused;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden; /* 隐藏背面 */
+            border-radius: 1rem; /* rounded-2xl */
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card-face.front {
+            background: #111;
+            transform: rotateY(0deg);
+        }
+
+        .card-face.back {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+            transform: rotateY(180deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 360度旋转动画 */
+        @keyframes spin-slow {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        /* 背面纹理 */
+        .back-pattern {
+            background-image: radial-gradient(rgba(255,215,0,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: absolute; inset: 0; opacity: 0.3;
+        }
+        
+        /* 防止点击事件穿透 */
+        .stop-propagation {
+            cursor: default;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -79,6 +148,40 @@
             <!-- Cards injected by JS -->
         </div>
     </main>
+
+    <!-- 全屏模态框 -->
+    <div id="modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center hidden" onclick="closeModal()">
+        <!-- 背景模糊 -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
+        
+        <!-- 3D 展示容器 -->
+        <div class="relative z-10 w-[360px] h-[504px] modal-perspective stop-propagation" onclick="event.stopPropagation()">
+            <div class="rotate-card-container">
+                <!-- 正面 (Front) -->
+                <div class="card-face front">
+                    <div id="modal-content" class="w-full h-full relative flex flex-col text-gray-200">
+                        <!-- 内容由 JS 动态填充 -->
+                    </div>
+                </div>
+                
+                <!-- 背面 (Back) - 统一设计 -->
+                <div class="card-face back border-2 border-amber-500/20">
+                    <div class="back-pattern"></div>
+                    <div class="relative z-10 text-center p-8 border border-amber-500/30 m-4 h-[94%] flex flex-col justify-center items-center bg-black/40">
+                        <i class="fa-solid fa-dragon text-6xl text-amber-700/50 mb-6"></i>
+                        <h2 class="text-4xl font-art font-bold text-transparent bg-clip-text bg-gradient-to-b from-amber-200 to-amber-800 mb-2">MYTHOS</h2>
+                        <div class="w-16 h-[1px] bg-amber-500/50 my-4"></div>
+                        <p class="text-[10px] tracking-[0.4em] text-amber-500/60 uppercase">Collector's Edition</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 关闭提示 -->
+            <div class="absolute -bottom-20 left-0 right-0 text-center text-white/40 text-sm tracking-widest animate-pulse">
+                CLICK OUTSIDE TO CLOSE
+            </div>
+        </div>
+    </div>
 
     <script>
         const cards = [
@@ -220,42 +323,35 @@
         ];
 
         const grid = document.getElementById('grid');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalContent = document.getElementById('modal-content');
 
         function render(dataset) {
             grid.innerHTML = '';
-            dataset.forEach(c => {
+            dataset.forEach((c, index) => {
                 const el = document.createElement('div');
-                // 修正：使用 aspect-[5/7] (标准扑克牌比例)，并移除固定高度。这样图片可以自然铺满而不留黑边。
+                // 添加 onclick 事件，点击触发 openModal
                 el.className = `card-wrapper w-full max-w-[300px] aspect-[5/7] cursor-pointer group`;
+                el.onclick = () => openModal(c);
                 
-                // 修正：rounded-md (较小圆角，不切角落文字)，移除 p-[2px]，确保无黑边
                 el.innerHTML = `
                     <div class="game-card theme-${c.suit} relative w-full h-full rounded-md overflow-hidden text-gray-200 flex flex-col">
-                        
-                        <!-- 图片层：object-cover 铺满容器，因为容器现在也是 5:7，所以几乎不会裁切 -->
                         <div class="z-level-img absolute inset-0 bg-black">
                             <img src="${c.file}" alt="${c.name}" 
                                 class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                                 onerror="this.src='https://placehold.co/300x420/222/FFF?text=${c.name}'">
-                            
-                            <!-- 底部渐变遮罩：用于文字衬底 -->
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent to-40%"></div>
                         </div>
-                        
-                        <!-- 顶部信息：鼠标悬停显示名字，平时完全透明 -->
                         <div class="z-level-text relative p-4 pt-3 flex justify-between items-start opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div class="text-shadow-sm bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
                                 <span class="text-xs font-bold text-white/90">${c.name}</span>
                             </div>
                         </div>
-
-                        <!-- 底部描述 -->
                         <div class="z-level-text mt-auto relative p-4 pb-5">
                             <div class="flex justify-between items-end mb-2">
                                 <h2 class="text-2xl font-art font-bold leading-none tracking-wider text-white drop-shadow-md" style="text-shadow: 0 2px 8px rgba(0,0,0,1)">${c.name}</h2>
                                 <span class="font-serif text-xl font-bold opacity-80 drop-shadow-md text-white/80">${c.rank}</span>
                             </div>
-                            
                             <div class="flex gap-2 mb-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
                                 ${c.tags.map(t => `<span class="text-[9px] border border-white/30 bg-black/60 px-1.5 py-0.5 rounded text-white/90 uppercase tracking-wide backdrop-blur-sm">${t}</span>`).join('')}
                             </div>
@@ -270,6 +366,34 @@
             });
         }
 
+        // 模态框逻辑
+        function openModal(card) {
+            // 填充正面内容 (复用卡牌样式，但更清晰)
+            modalContent.innerHTML = `
+                 <div class="absolute inset-0 bg-black">
+                    <img src="${card.file}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/360x504/222/FFF?text=${card.name}'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent to-50%"></div>
+                </div>
+                <div class="relative z-20 mt-auto p-8 pb-10 text-center">
+                    <div class="mb-2">
+                        <span class="text-4xl font-serif font-bold text-amber-500/80 drop-shadow-lg">${card.rank}</span>
+                    </div>
+                    <h2 class="text-4xl font-art font-bold text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)] mb-2">${card.name}</h2>
+                    <p class="text-xs text-amber-200/80 uppercase tracking-[0.3em] mb-4">${card.title}</p>
+                    <p class="text-sm text-gray-300 leading-relaxed font-light drop-shadow-md bg-black/40 p-4 rounded backdrop-blur-sm border border-white/10">
+                        ${card.desc}
+                    </p>
+                </div>
+            `;
+            
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modalOverlay.classList.add('hidden');
+        }
+
+        // 倾斜效果 (原功能)
         function initTilt(wrapper) {
             const card = wrapper.querySelector('.game-card');
             wrapper.addEventListener('mousemove', (e) => {
