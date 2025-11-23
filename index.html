@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>神话艺术图鉴 | MYTHOS ART NOUVEAU</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Favicon 直接引用 -->
     <link rel="icon" href="img/favicon.png" type="image/png">
-
+    
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -112,6 +113,12 @@
             from { transform: rotateY(0deg); }
             to { transform: rotateY(360deg); }
         }
+        
+        /* 音乐按钮旋转动画 */
+        @keyframes spin-disk {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
 
         /* 背面纹理 */
         .back-pattern {
@@ -124,11 +131,39 @@
         .stop-propagation {
             cursor: default;
         }
+
+        /* 音乐按钮样式 - 播放状态 */
+        .music-playing .music-ring {
+            animation: spin-disk 3s infinite linear;
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
     <div class="bg-texture"></div>
+    
+    <!-- 1. 添加背景音乐标签 -->
+    <audio id="bgm" loop>
+        <source src="veil.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- 2. 添加音乐控制按钮 (右下角) -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button id="music-btn" onclick="toggleMusic()" class="relative w-12 h-12 rounded-full bg-black/80 border border-amber-500/30 text-amber-500/80 backdrop-blur-md flex items-center justify-center hover:bg-amber-900/40 hover:text-amber-200 hover:border-amber-400/50 transition-all hover:scale-110 active:scale-95 group">
+            <!-- 图标 -->
+            <i id="music-icon" class="fa-solid fa-play text-sm relative z-10 transition-all"></i>
+            
+            <!-- 装饰环 (播放时旋转) -->
+            <div id="music-ring" class="music-ring absolute inset-1 rounded-full border border-dashed border-amber-500/40 opacity-0 transition-opacity duration-500 pointer-events-none"></div>
+            
+            <!-- 提示 Tooltip -->
+            <span class="absolute right-full mr-3 bg-black/80 text-amber-500/80 text-[10px] px-2 py-1 rounded tracking-widest uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Original Soundtrack
+            </span>
+        </button>
+    </div>
 
     <header class="py-12 text-center relative z-10 bg-gradient-to-b from-black/90 to-transparent">
         <h1 class="text-4xl md:text-6xl font-art font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-200 drop-shadow-sm mb-2">
@@ -186,10 +221,77 @@
     </div>
 
     <script>
+        // ==============================================================
+        // 1. 简化后的图片路径逻辑
+        // ==============================================================
+        
+        // 直接返回 img/ 前缀的路径，无需复杂CDN判断
+        const getImg = (filename) => `img/${filename}`;
+
+        // ==============================================================
+        // 2. 音乐播放逻辑
+        // ==============================================================
+        const audio = document.getElementById('bgm');
+        const musicBtn = document.getElementById('music-btn');
+        const musicIcon = document.getElementById('music-icon');
+        const musicRing = document.getElementById('music-ring');
+        let isPlaying = false;
+
+        function toggleMusic() {
+            if (isPlaying) {
+                audio.pause();
+                updateMusicUI(false);
+            } else {
+                audio.play().then(() => {
+                    updateMusicUI(true);
+                }).catch(err => {
+                    console.log("播放失败: ", err);
+                    // 只有手动点击失败时才弹窗提示
+                    alert("请先与页面交互（如点击任意处）以允许音频播放。");
+                });
+            }
+        }
+
+        // 抽取更新 UI 的逻辑，方便自动播放时复用
+        function updateMusicUI(playing) {
+            isPlaying = playing;
+            if (playing) {
+                musicIcon.classList.replace('fa-play', 'fa-pause');
+                musicBtn.classList.add('music-playing');
+                musicRing.classList.remove('opacity-0');
+                musicRing.classList.add('opacity-100');
+            } else {
+                musicIcon.classList.replace('fa-pause', 'fa-play');
+                musicBtn.classList.remove('music-playing');
+                musicRing.classList.remove('opacity-100');
+                musicRing.classList.add('opacity-0');
+            }
+        }
+
+        // --- 页面加载 3 秒后尝试自动播放 ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                // 如果当前没有在播放，才尝试自动播放
+                if (!isPlaying) {
+                    console.log("尝试自动播放背景音乐...");
+                    audio.play().then(() => {
+                        console.log("自动播放成功");
+                        updateMusicUI(true);
+                    }).catch(err => {
+                        // 自动播放失败是预期内的（如果没有用户交互），这里静默失败，不打扰用户
+                        console.log("自动播放被浏览器策略拦截 (正常现象，需用户先交互):", err);
+                    });
+                }
+            }, 3000);
+        });
+
+        // ==============================================================
+        // 3. 卡牌数据
+        // ==============================================================
         const cards = [
             // --- SPADES (黑桃) ---
             {
-                file: "img/SpadesK.png",
+                file: "SpadesK.png",
                 suit: "spades", rank: "K",
                 name: "ZEUS", title: "King of Gods",
                 style: "Gustav Klimt Style",
@@ -197,7 +299,7 @@
                 tags: ["Klimt", "Gold", "Lightning"]
             },
             {
-                file: "img/SpadesQ.png",
+                file: "SpadesQ.png",
                 suit: "spades", rank: "Q",
                 name: "HERA", title: "Queen of Gods",
                 style: "Art Nouveau",
@@ -205,7 +307,7 @@
                 tags: ["Divine", "Peacock", "Stars"]
             },
             {
-                file: "img/SpadesJ.png",
+                file: "SpadesJ.png",
                 suit: "spades", rank: "J",
                 name: "ASTRAEUS", title: "God of Dusk",
                 style: "Vienna Secession",
@@ -213,7 +315,7 @@
                 tags: ["Stars", "Dusk", "Geometry"]
             },
             {
-                file: "img/SpadesA.png",
+                file: "SpadesA.png",
                 suit: "spades", rank: "A",
                 name: "CELESTIAL ESSENCE", title: "The Source",
                 style: "Cosmic Mosaic",
@@ -223,7 +325,7 @@
 
             // --- HEARTS (红心) ---
             {
-                file: "img/HeartsK.png",
+                file: "HeartsK.png",
                 suit: "hearts", rank: "K",
                 name: "POSEIDON", title: "God of the Sea",
                 style: "Tiffany Glass",
@@ -231,7 +333,7 @@
                 tags: ["Iridescent", "Sea", "Coral"]
             },
             {
-                file: "img/HeartsQ.png",
+                file: "HeartsQ.png",
                 suit: "hearts", rank: "Q",
                 name: "AMPHITRITE", title: "Queen of the Sea",
                 style: "René Lalique",
@@ -239,7 +341,7 @@
                 tags: ["Translucent", "Pearls", "Waves"]
             },
             {
-                file: "img/HeartsJ.png",
+                file: "HeartsJ.png",
                 suit: "hearts", rank: "J",
                 name: "TRITON", title: "Sea Messenger",
                 style: "Fluid Motion",
@@ -247,7 +349,7 @@
                 tags: ["Conch", "Ripple", "Muscle"]
             },
             {
-                file: "img/HeartsA.png",
+                file: "HeartsA.png",
                 suit: "hearts", rank: "A",
                 name: "ABYSSAL ESSENCE", title: "Deep Core",
                 style: "Tiffany Iridescent",
@@ -257,7 +359,7 @@
 
             // --- CLUBS (梅花) ---
             {
-                file: "img/ClubsK.png",
+                file: "ClubsK.png",
                 suit: "clubs", rank: "K",
                 name: "PAN", title: "God of the Wild",
                 style: "Nancy School",
@@ -265,7 +367,7 @@
                 tags: ["Wild", "Moss", "Nature"]
             },
             {
-                file: "img/ClubsQ.png",
+                file: "ClubsQ.png",
                 suit: "clubs", rank: "Q",
                 name: "ARTEMIS", title: "Goddess of Hunt",
                 style: "Cameo Glass",
@@ -273,7 +375,7 @@
                 tags: ["Hunt", "Deer", "Glass"]
             },
             {
-                file: "img/ClubsJ.png",
+                file: "ClubsJ.png",
                 suit: "clubs", rank: "J",
                 name: "CERNUNNOS", title: "Horned God",
                 style: "Celtic Nature",
@@ -281,7 +383,7 @@
                 tags: ["Celtic", "Horned", "Ancient"]
             },
             {
-                file: "img/ClubsA.png",
+                file: "ClubsA.png",
                 suit: "clubs", rank: "A",
                 name: "SYLVAN ESSENCE", title: "Forest Soul",
                 style: "Marquetry",
@@ -291,7 +393,7 @@
 
             // --- DIAMONDS (方块) ---
             {
-                file: "img/DiamondsK.png",
+                file: "DiamondsK.png",
                 suit: "diamonds", rank: "K",
                 name: "HEPHAESTUS", title: "God of Forge",
                 style: "Gaudí Organic",
@@ -299,7 +401,7 @@
                 tags: ["Forge", "Fire", "Stone"]
             },
             {
-                file: "img/DiamondsQ.png",
+                file: "DiamondsQ.png",
                 suit: "diamonds", rank: "Q",
                 name: "GAIA", title: "Mother Earth",
                 style: "Beardsley Line",
@@ -307,7 +409,7 @@
                 tags: ["Earth", "Lines", "Contrast"]
             },
             {
-                file: "img/DiamondsJ.png",
+                file: "DiamondsJ.png",
                 suit: "diamonds", rank: "J",
                 name: "OUREA", title: "Mountain God",
                 style: "Trencadís Mosaic",
@@ -315,7 +417,7 @@
                 tags: ["Rock", "Mosaic", "Giant"]
             },
             {
-                file: "img/DiamondsA.png",
+                file: "DiamondsA.png",
                 suit: "diamonds", rank: "A",
                 name: "MOUNTAIN ESSENCE", title: "Crystal Core",
                 style: "Geo Structure",
@@ -332,14 +434,13 @@
             grid.innerHTML = '';
             dataset.forEach((c, index) => {
                 const el = document.createElement('div');
-                // 添加 onclick 事件，点击触发 openModal
                 el.className = `card-wrapper w-full max-w-[300px] aspect-[5/7] cursor-pointer group`;
                 el.onclick = () => openModal(c);
                 
                 el.innerHTML = `
                     <div class="game-card theme-${c.suit} relative w-full h-full rounded-md overflow-hidden text-gray-200 flex flex-col">
                         <div class="z-level-img absolute inset-0 bg-black">
-                            <img src="${c.file}" alt="${c.name}" 
+                            <img src="${getImg(c.file)}" alt="${c.name}" 
                                 class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                                 onerror="this.src='https://placehold.co/300x420/222/FFF?text=${c.name}'">
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent to-40%"></div>
@@ -368,12 +469,10 @@
             });
         }
 
-        // 模态框逻辑
         function openModal(card) {
-            // 填充正面内容 (复用卡牌样式，但更清晰)
             modalContent.innerHTML = `
                  <div class="absolute inset-0 bg-black">
-                    <img src="${card.file}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/360x504/222/FFF?text=${card.name}'">
+                    <img src="${getImg(card.file)}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/360x504/222/FFF?text=${card.name}'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent to-50%"></div>
                 </div>
                 <div class="relative z-20 mt-auto p-8 pb-10 text-center">
@@ -395,7 +494,6 @@
             modalOverlay.classList.add('hidden');
         }
 
-        // 倾斜效果 (原功能)
         function initTilt(wrapper) {
             const card = wrapper.querySelector('.game-card');
             wrapper.addEventListener('mousemove', (e) => {
