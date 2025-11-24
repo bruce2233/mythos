@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>神话艺术图鉴 | MYTHOS ART NOUVEAU</title>
-    <!-- Favicon 直接引用 -->
     <link rel="icon" href="img/favicon.png" type="image/png">
     
+    <!-- 样式库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- 工具库：截图与二维码 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
         :root {
-            --c-spades: #1e3a8a;   /* 靛蓝 */
-            --c-hearts: #0d9488;   /* 绿松石 */
-            --c-clubs: #3f6212;    /* 橄榄绿 */
-            --c-diamonds: #b45309; /* 赤陶 */
+            --c-spades: #1e3a8a;
+            --c-hearts: #0d9488;
+            --c-clubs: #3f6212;
+            --c-diamonds: #b45309;
         }
 
         body {
@@ -79,7 +83,7 @@
             animation: spin-slow 8s infinite linear;
         }
         
-        /* 鼠标悬停时暂停旋转，方便查看细节 */
+        .rotate-card-container.paused,
         .rotate-card-container:hover {
             animation-play-state: paused;
         }
@@ -88,8 +92,8 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            backface-visibility: hidden; /* 隐藏背面 */
-            border-radius: 1rem; /* rounded-2xl */
+            backface-visibility: hidden;
+            border-radius: 1rem;
             overflow: hidden;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
             border: 1px solid rgba(255,255,255,0.2);
@@ -108,34 +112,68 @@
             justify-content: center;
         }
 
-        /* 360度旋转动画 */
         @keyframes spin-slow {
             from { transform: rotateY(0deg); }
             to { transform: rotateY(360deg); }
         }
         
-        /* 音乐按钮旋转动画 */
         @keyframes spin-disk {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
 
-        /* 背面纹理 */
         .back-pattern {
             background-image: radial-gradient(rgba(255,215,0,0.1) 1px, transparent 1px);
             background-size: 20px 20px;
             position: absolute; inset: 0; opacity: 0.3;
         }
         
-        /* 防止点击事件穿透 */
         .stop-propagation {
             cursor: default;
         }
 
-        /* 音乐按钮样式 - 播放状态 */
         .music-playing .music-ring {
             animation: spin-disk 3s infinite linear;
             opacity: 1;
+        }
+
+        /* --- 弹窗样式修正 --- */
+        #share-result-overlay {
+            background: rgba(0,0,0,0.92);
+            backdrop-filter: blur(8px);
+        }
+        
+        /* 增加顶部内边距，防止视觉上太贴顶 */
+        #share-result-overlay .result-modal {
+            max-height: 90vh;
+            margin-top: 2vh;
+        }
+
+        /* 隐藏的生成模板容器 
+           关键点：使用 z-index: -100 放在底层，而不是 display: none
+           物理尺寸设置得很大，保证清晰度
+        */
+        #share-template-container {
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: -100;
+            width: 800px;
+            height: 1400px;
+            /* 避免干扰鼠标交互 */
+            pointer-events: none;
+            /* 透明度0可以隐藏，但html2canvas仍能捕捉 */
+            opacity: 0; 
+        }
+
+        #share-card-render {
+            width: 800px;
+            height: 1400px;
+            background-color: #050505;
+            position: relative;
+            /* 启用字体平滑 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
     </style>
 </head>
@@ -143,22 +181,16 @@
 
     <div class="bg-texture"></div>
     
-    <!-- 1. 添加背景音乐标签 -->
+    <!-- BGM -->
     <audio id="bgm" loop>
         <source src="veil.mp3" type="audio/mpeg">
-        Your browser does not support the audio element.
     </audio>
 
-    <!-- 2. 添加音乐控制按钮 (右下角) -->
-    <div class="fixed bottom-6 right-6 z-50">
+    <!-- 音乐控制 -->
+    <div class="fixed bottom-6 right-6 z-40">
         <button id="music-btn" onclick="toggleMusic()" class="relative w-12 h-12 rounded-full bg-black/80 border border-amber-500/30 text-amber-500/80 backdrop-blur-md flex items-center justify-center hover:bg-amber-900/40 hover:text-amber-200 hover:border-amber-400/50 transition-all hover:scale-110 active:scale-95 group">
-            <!-- 图标 -->
             <i id="music-icon" class="fa-solid fa-play text-sm relative z-10 transition-all"></i>
-            
-            <!-- 装饰环 (播放时旋转) -->
             <div id="music-ring" class="music-ring absolute inset-1 rounded-full border border-dashed border-amber-500/40 opacity-0 transition-opacity duration-500 pointer-events-none"></div>
-            
-            <!-- 提示 Tooltip -->
             <span class="absolute right-full mr-3 bg-black/80 text-amber-500/80 text-[10px] px-2 py-1 rounded tracking-widest uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                 Original Soundtrack
             </span>
@@ -186,22 +218,18 @@
         </div>
     </main>
 
-    <!-- 全屏模态框 -->
+    <!-- 卡牌详情 3D 模态框 -->
     <div id="modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center hidden" onclick="closeModal()">
-        <!-- 背景模糊 -->
         <div class="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
         
-        <!-- 3D 展示容器 -->
         <div class="relative z-10 w-[360px] h-[504px] modal-perspective stop-propagation" onclick="event.stopPropagation()">
-            <div class="rotate-card-container">
-                <!-- 正面 (Front) -->
+            <div id="rotate-container" class="rotate-card-container group">
                 <div class="card-face front">
                     <div id="modal-content" class="w-full h-full relative flex flex-col text-gray-200">
-                        <!-- 内容由 JS 动态填充 -->
+                        <!-- JS 填充 -->
                     </div>
                 </div>
                 
-                <!-- 背面 (Back) - 统一设计 -->
                 <div class="card-face back border-2 border-amber-500/20">
                     <div class="back-pattern"></div>
                     <div class="relative z-10 text-center p-8 border border-amber-500/30 m-4 h-[94%] flex flex-col justify-center items-center bg-black/40">
@@ -213,24 +241,99 @@
                 </div>
             </div>
             
-            <!-- 关闭提示 -->
-            <div class="absolute -bottom-20 left-0 right-0 text-center text-white/40 text-sm tracking-widest animate-pulse">
-                CLICK OUTSIDE TO CLOSE
+            <div class="absolute -bottom-20 left-0 right-0 text-center flex flex-col gap-2 items-center justify-center">
+                <span class="text-white/40 text-sm tracking-widest animate-pulse">CLICK OUTSIDE TO CLOSE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+      === 核心修复：高清 HTML 模板 === 
+      我们使用一个物理尺寸巨大的 div (800x1400) 作为模板。
+      利用 HTML/CSS 的布局能力来替代难用的 Canvas API。
+      内嵌式设计：图片放在 padding 内部。
+    -->
+    <div id="share-template-container">
+        <div id="share-card-render" class="flex flex-col">
+            <!-- 1. 背景纹理 -->
+            <div class="absolute inset-0 bg-[#050505]">
+                <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-[#111] via-transparent to-[#050505] opacity-80"></div>
+            </div>
+
+            <!-- 2. 金色边框 (绝对定位，确保在图片上方形成框，或者图片在框内) -->
+            <!-- 这里使用 padding 策略：外层容器 padding=20px，背景图在内容区 -->
+            <div class="absolute inset-0 border-4 border-amber-700 z-20 pointer-events-none m-5"></div>
+            <div class="absolute inset-0 border border-amber-400/30 z-20 pointer-events-none m-8"></div>
+
+            <div class="relative mt-5 mx-5 h-[950px] bg-[#050505] overflow-hidden z-10">
+                <div id="share-img-bg" class="w-full h-full bg-cover bg-top bg-no-repeat transition-all"></div>
+                
+                <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#050505]/50 to-transparent pointer-events-none"></div>
+            </div>
+
+            <div class="relative z-10 flex-1 px-16 pt-8 pb-12 flex flex-col items-center text-center -mt-2">
+                
+                <h2 id="share-name" class="font-art text-7xl font-bold text-amber-400 drop-shadow-lg mb-4 tracking-wide">ZEUS</h2>
+                
+                <div class="w-20 h-1 bg-amber-700 mb-5"></div>
+                
+                <p id="share-title" class="font-serif text-2xl text-amber-500/70 tracking-[0.3em] uppercase mb-10">KING OF GODS</p>
+                
+                <div class="flex-1 w-full max-w-xl">
+                     <p id="share-desc" class="font-serif text-2xl text-gray-300 italic leading-relaxed opacity-90">
+                        Majestically seated on Olympus...
+                    </p>
+                </div>
+
+                <div class="w-full mt-auto pt-10 flex items-end justify-between border-t border-amber-900/30">
+                    <div class="text-left">
+                        <h3 class="font-art text-4xl text-amber-700 font-bold tracking-widest">MYTHOS</h3>
+                        <p class="font-serif text-sm text-gray-500 tracking-[0.2em] mt-2 uppercase">Art Nouveau Collection</p>
+                    </div>
+                    
+                    <div class="bg-white p-2 border border-amber-700/50 shadow-xl">
+                        <div id="qrcode-target"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分享结果展示弹窗 -->
+    <div id="share-result-overlay" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="result-modal bg-[#111] border border-amber-500/30 p-4 rounded-lg w-full max-w-[400px] shadow-2xl relative animate-[fadeIn_0.3s_ease] flex flex-col">
+            
+            <button onclick="closeShareResult()" class="absolute -top-4 -right-4 w-9 h-9 bg-amber-900 text-amber-100 rounded-full flex items-center justify-center hover:bg-amber-700 transition-colors z-50 shadow-lg border border-white/20">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="text-center mb-3 mt-1 flex-shrink-0">
+                <h3 class="text-amber-200 font-serif tracking-widest text-sm uppercase">Collector Card</h3>
+            </div>
+
+            <!-- 预览图容器 -->
+            <div id="generated-image-container" class="w-full rounded overflow-hidden border border-white/10 flex-1 min-h-0 flex items-center justify-center bg-black/50">
+                <!-- 最终图片 -->
+            </div>
+
+            <div class="mt-4 flex gap-3 flex-shrink-0">
+                <a id="download-link" href="#" download="mythos_card.png" class="flex-1 bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-white text-center py-3 rounded text-sm tracking-widest transition-all uppercase font-bold flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-download"></i> Save Image
+                </a>
+            </div>
+            
+            <div class="flex-shrink-0 pt-2 text-center">
+                 <p class="text-[10px] text-gray-500">
+                    High Resolution: 1600 x 2800
+                </p>
             </div>
         </div>
     </div>
 
     <script>
-        // ==============================================================
-        // 1. 简化后的图片路径逻辑
-        // ==============================================================
-        
-        // 直接返回 img/ 前缀的路径，无需复杂CDN判断
         const getImg = (filename) => `img/${filename}`;
 
-        // ==============================================================
-        // 2. 音乐播放逻辑
-        // ==============================================================
         const audio = document.getElementById('bgm');
         const musicBtn = document.getElementById('music-btn');
         const musicIcon = document.getElementById('music-icon');
@@ -242,17 +345,10 @@
                 audio.pause();
                 updateMusicUI(false);
             } else {
-                audio.play().then(() => {
-                    updateMusicUI(true);
-                }).catch(err => {
-                    console.log("播放失败: ", err);
-                    // 只有手动点击失败时才弹窗提示
-                    alert("请先与页面交互（如点击任意处）以允许音频播放。");
-                });
+                audio.play().then(() => updateMusicUI(true)).catch(err => alert("Interaction required first."));
             }
         }
 
-        // 抽取更新 UI 的逻辑，方便自动播放时复用
         function updateMusicUI(playing) {
             isPlaying = playing;
             if (playing) {
@@ -268,181 +364,47 @@
             }
         }
 
-        // --- 页面加载 3 秒后尝试自动播放 ---
         window.addEventListener('load', () => {
-            setTimeout(() => {
-                // 如果当前没有在播放，才尝试自动播放
-                if (!isPlaying) {
-                    console.log("尝试自动播放背景音乐...");
-                    audio.play().then(() => {
-                        console.log("自动播放成功");
-                        updateMusicUI(true);
-                    }).catch(err => {
-                        // 自动播放失败是预期内的（如果没有用户交互），这里静默失败，不打扰用户
-                        console.log("自动播放被浏览器策略拦截 (正常现象，需用户先交互):", err);
-                    });
-                }
-            }, 3000);
+            setTimeout(() => { if (!isPlaying) audio.play().then(() => updateMusicUI(true)).catch(e=>{}); }, 3000);
         });
 
-        // ==============================================================
-        // 3. 卡牌数据
-        // ==============================================================
+        // --- 数据 ---
         const cards = [
-            // --- SPADES (黑桃) ---
-            {
-                file: "SpadesK.png",
-                suit: "spades", rank: "K",
-                name: "ZEUS", title: "King of Gods",
-                style: "Gustav Klimt Style",
-                desc: "威严地坐在奥林匹斯山巅。长袍如克里姆特的织毯，布满宇宙星云。手持纯金箔质感的锯齿状闪电。",
-                tags: ["Klimt", "Gold", "Lightning"]
-            },
-            {
-                file: "SpadesQ.png",
-                suit: "spades", rank: "Q",
-                name: "HERA", title: "Queen of Gods",
-                style: "Art Nouveau",
-                desc: "高贵庄重，身旁是圣物孔雀，尾羽如金色螺旋。长裙装饰星辰与石榴，充满神圣感。",
-                tags: ["Divine", "Peacock", "Stars"]
-            },
-            {
-                file: "SpadesJ.png",
-                suit: "spades", rank: "J",
-                name: "ASTRAEUS", title: "God of Dusk",
-                style: "Vienna Secession",
-                desc: "年轻长翼的侧面形象，手持几何风格星盘。将象征星辰的光之种子撒向深靛蓝色的夜空。",
-                tags: ["Stars", "Dusk", "Geometry"]
-            },
-            {
-                file: "SpadesA.png",
-                suit: "spades", rank: "A",
-                name: "CELESTIAL ESSENCE", title: "The Source",
-                style: "Cosmic Mosaic",
-                desc: "巨大的符号拼贴画。由金色螺旋与银色方块构成，放射光芒与闪电，如同一件神圣的宇宙圣物。",
-                tags: ["Mosaic", "Spiral", "Sky"]
-            },
-
-            // --- HEARTS (红心) ---
-            {
-                file: "HeartsK.png",
-                suit: "hearts", rank: "K",
-                name: "POSEIDON", title: "God of the Sea",
-                style: "Tiffany Glass",
-                desc: "手持虹彩光泽的三叉戟，坐在活珊瑚宝座上。胡须如海浪流动，周围环绕虹彩玻璃质感的鱼群。",
-                tags: ["Iridescent", "Sea", "Coral"]
-            },
-            {
-                file: "HeartsQ.png",
-                suit: "hearts", rank: "Q",
-                name: "AMPHITRITE", title: "Queen of the Sea",
-                style: "René Lalique",
-                desc: "从浪花中优雅升起，呈现半透明和蛋白石般的柔和光泽。长发与海藻、珍珠缠绕。",
-                tags: ["Translucent", "Pearls", "Waves"]
-            },
-            {
-                file: "HeartsJ.png",
-                suit: "hearts", rank: "J",
-                name: "TRITON", title: "Sea Messenger",
-                style: "Fluid Motion",
-                desc: "强壮的人鱼吹响螺旋海螺。声音化为“鞭线”曲线激起涟漪，强调肌肉的动态美。",
-                tags: ["Conch", "Ripple", "Muscle"]
-            },
-            {
-                file: "HeartsA.png",
-                suit: "hearts", rank: "A",
-                name: "ABYSSAL ESSENCE", title: "Deep Core",
-                style: "Tiffany Iridescent",
-                desc: "巨大的红心符号，蒂芙尼虹彩玻璃质感，内部流动变幻色彩。被波浪鞭线与光之气泡环绕。",
-                tags: ["Glass", "Bubbles", "Flow"]
-            },
-
-            // --- CLUBS (梅花) ---
-            {
-                file: "ClubsK.png",
-                suit: "clubs", rank: "K",
-                name: "PAN", title: "God of the Wild",
-                style: "Nancy School",
-                desc: "栖身长满苔藓的古木，吹奏排箫。背景是层次极为丰富的密林，注重表现树皮与苔藓质感。",
-                tags: ["Wild", "Moss", "Nature"]
-            },
-            {
-                file: "ClubsQ.png",
-                suit: "clubs", rank: "Q",
-                name: "ARTEMIS", title: "Goddess of Hunt",
-                style: "Cameo Glass",
-                desc: "林中大步前行，手持弓箭，额戴新月。风格如同埃米尔·加莱的多层套色玻璃艺术品。",
-                tags: ["Hunt", "Deer", "Glass"]
-            },
-            {
-                file: "ClubsJ.png",
-                suit: "clubs", rank: "J",
-                name: "CERNUNNOS", title: "Horned God",
-                style: "Celtic Nature",
-                desc: "盘腿而坐的鹿角神，颈戴金属项圈。蛇与鹿伴其左右，代表森林最深处的神秘核心。",
-                tags: ["Celtic", "Horned", "Ancient"]
-            },
-            {
-                file: "ClubsA.png",
-                suit: "clubs", rank: "A",
-                name: "SYLVAN ESSENCE", title: "Forest Soul",
-                style: "Marquetry",
-                desc: "梅花符号从底部生长，茎是古老树干。模仿木材镶嵌艺术，充满精细的叶脉与藤蔓细节。",
-                tags: ["Wood", "Roots", "Life"]
-            },
-
-            // --- DIAMONDS (方块) ---
-            {
-                file: "DiamondsK.png",
-                suit: "diamonds", rank: "K",
-                name: "HEPHAESTUS", title: "God of Forge",
-                style: "Gaudí Organic",
-                desc: "跛足强壮的工匠神，站在火山洞穴铁砧旁。背景是高迪风格的有机石柱，铁锤迸发金色火花。",
-                tags: ["Forge", "Fire", "Stone"]
-            },
-            {
-                file: "DiamondsQ.png",
-                suit: "diamonds", rank: "Q",
-                name: "GAIA", title: "Mother Earth",
-                style: "Beardsley Line",
-                desc: "斜躺的宏伟女性，身体即地貌。比亚兹莱式的高对比度纯黑线条，突出雕塑感。",
-                tags: ["Earth", "Lines", "Contrast"]
-            },
-            {
-                file: "DiamondsJ.png",
-                suit: "diamonds", rank: "J",
-                name: "OUREA", title: "Mountain God",
-                style: "Trencadís Mosaic",
-                desc: "岩石构成的粗犷巨人从峭壁浮现。身体表面呈现高迪式碎瓷砖马赛克纹理。",
-                tags: ["Rock", "Mosaic", "Giant"]
-            },
-            {
-                file: "DiamondsA.png",
-                suit: "diamonds", rank: "A",
-                name: "MOUNTAIN ESSENCE", title: "Crystal Core",
-                style: "Geo Structure",
-                desc: "巨大的水晶符号，锐利线条充满比亚兹莱式美感。镶嵌在高迪风格流动的岩石地层中。",
-                tags: ["Crystal", "Gold", "Sharp"]
-            }
+            { file: "SpadesK.png", suit: "spades", rank: "K", name: "ZEUS", title: "King of Gods", style: "Gustav Klimt", desc: "Majestically seated on Olympus. Robes like Klimt's tapestry, filled with cosmic nebula. Holding pure gold foil textured lightning.", tags: ["Klimt", "Gold", "Lightning"] },
+            { file: "SpadesQ.png", suit: "spades", rank: "Q", name: "HERA", title: "Queen of Gods", style: "Art Nouveau", desc: "Noble and solemn, flanked by sacred peacocks with tails of golden spirals. Dress adorned with stars and pomegranates.", tags: ["Divine", "Peacock", "Stars"] },
+            { file: "SpadesJ.png", suit: "spades", rank: "J", name: "ASTRAEUS", title: "God of Dusk", style: "Vienna Secession", desc: "Winged profile holding a geometric astrolabe. Scattering seeds of light into the deep indigo night sky.", tags: ["Stars", "Dusk", "Geometry"] },
+            { file: "SpadesA.png", suit: "spades", rank: "A", name: "CELESTIAL", title: "The Source", style: "Cosmic Mosaic", desc: "A collage of symbols. Golden spirals and silver squares radiating light and lightning, a cosmic relic.", tags: ["Mosaic", "Spiral", "Sky"] },
+            { file: "HeartsK.png", suit: "hearts", rank: "K", name: "POSEIDON", title: "God of the Sea", style: "Tiffany Glass", desc: "Holding iridescent trident, on living coral throne. Beard flows like waves, surrounded by glass-textured fish.", tags: ["Iridescent", "Sea", "Coral"] },
+            { file: "HeartsQ.png", suit: "hearts", rank: "Q", name: "AMPHITRITE", title: "Queen of Sea", style: "René Lalique", desc: "Rising elegantly from foam, translucent opalescent glow. Hair intertwined with seaweed and pearls.", tags: ["Translucent", "Pearls", "Waves"] },
+            { file: "HeartsJ.png", suit: "hearts", rank: "J", name: "TRITON", title: "Sea Messenger", style: "Fluid Motion", desc: "Strong merman blowing a spiral conch. Sound becomes 'whiplash' curves creating ripples.", tags: ["Conch", "Ripple", "Muscle"] },
+            { file: "HeartsA.png", suit: "hearts", rank: "A", name: "ABYSSAL", title: "Deep Core", style: "Tiffany Iridescent", desc: "Giant heart symbol, Tiffany glass texture, shifting internal colors. Surrounded by wave curves and light bubbles.", tags: ["Glass", "Bubbles", "Flow"] },
+            { file: "ClubsK.png", suit: "clubs", rank: "K", name: "PAN", title: "God of Wild", style: "Nancy School", desc: "Perched on mossy ancient wood, playing pipes. Background of dense forest with rich bark textures.", tags: ["Wild", "Moss", "Nature"] },
+            { file: "ClubsQ.png", suit: "clubs", rank: "Q", name: "ARTEMIS", title: "Goddess of Hunt", style: "Cameo Glass", desc: "Striding through woods with bow, crescent moon on brow. Style resembles Émile Gallé's layered glass art.", tags: ["Hunt", "Deer", "Glass"] },
+            { file: "ClubsJ.png", suit: "clubs", rank: "J", name: "CERNUNNOS", title: "Horned God", style: "Celtic Nature", desc: "Cross-legged horned god with metal torque. Snake and stag attend him, deep forest mystery.", tags: ["Celtic", "Horned", "Ancient"] },
+            { file: "ClubsA.png", suit: "clubs", rank: "A", name: "SYLVAN", title: "Forest Soul", style: "Marquetry", desc: "Club symbol growing from ancient trunk. Mimics wood marquetry art, full of fine vein and vine details.", tags: ["Wood", "Roots", "Life"] },
+            { file: "DiamondsK.png", suit: "diamonds", rank: "K", name: "HEPHAESTUS", title: "God of Forge", style: "Gaudí Organic", desc: "Strong smith at volcano anvil. Background of Gaudí-esque organic stone columns, hammer sparking gold.", tags: ["Forge", "Fire", "Stone"] },
+            { file: "DiamondsQ.png", suit: "diamonds", rank: "Q", name: "GAIA", title: "Mother Earth", style: "Beardsley Line", desc: "Magnificent reclining female, body as landscape. Beardsley-style high contrast black lines.", tags: ["Earth", "Lines", "Contrast"] },
+            { file: "DiamondsJ.png", suit: "diamonds", rank: "J", name: "OUREA", title: "Mountain God", style: "Trencadís Mosaic", desc: "Rugged giant emerging from cliffs. Surface features Gaudí-style broken tile mosaic textures.", tags: ["Rock", "Mosaic", "Giant"] },
+            { file: "DiamondsA.png", suit: "diamonds", rank: "A", name: "MOUNTAIN", title: "Crystal Core", style: "Geo Structure", desc: "Giant crystal symbol, sharp Beardsley lines. Embedded in flowing Gaudí-style rock strata.", tags: ["Crystal", "Gold", "Sharp"] }
         ];
 
         const grid = document.getElementById('grid');
         const modalOverlay = document.getElementById('modal-overlay');
         const modalContent = document.getElementById('modal-content');
+        const rotateContainer = document.getElementById('rotate-container');
+
+        let currentCardData = null;
 
         function render(dataset) {
             grid.innerHTML = '';
-            dataset.forEach((c, index) => {
+            dataset.forEach((c) => {
                 const el = document.createElement('div');
                 el.className = `card-wrapper w-full max-w-[300px] aspect-[5/7] cursor-pointer group`;
                 el.onclick = () => openModal(c);
-                
                 el.innerHTML = `
                     <div class="game-card theme-${c.suit} relative w-full h-full rounded-md overflow-hidden text-gray-200 flex flex-col">
                         <div class="z-level-img absolute inset-0 bg-black">
-                            <img src="${getImg(c.file)}" alt="${c.name}" 
-                                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-                                onerror="this.src='https://placehold.co/300x420/222/FFF?text=${c.name}'">
+                            <img src="${getImg(c.file)}" alt="${c.name}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" onerror="this.src='https://placehold.co/300x420/222/FFF?text=${c.name}'">
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent to-40%"></div>
                         </div>
                         <div class="z-level-text relative p-4 pt-3 flex justify-between items-start opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -458,7 +420,7 @@
                             <div class="flex gap-2 mb-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
                                 ${c.tags.map(t => `<span class="text-[9px] border border-white/30 bg-black/60 px-1.5 py-0.5 rounded text-white/90 uppercase tracking-wide backdrop-blur-sm">${t}</span>`).join('')}
                             </div>
-                            <p class="text-[11px] leading-relaxed text-gray-200 font-light desc-text pl-1 drop-shadow-md line-clamp-2 group-hover:line-clamp-none transition-all bg-black/30 rounded p-1 backdrop-blur-[1px]">
+                            <p class="text-[11px] leading-relaxed text-gray-200 font-light desc-text pl-1 drop-shadow-md line-clamp-2 bg-black/30 rounded p-1 backdrop-blur-[1px]">
                                 ${c.desc}
                             </p>
                         </div>
@@ -470,11 +432,19 @@
         }
 
         function openModal(card) {
+            currentCardData = card; 
+            rotateContainer.classList.remove('paused'); 
+
             modalContent.innerHTML = `
                  <div class="absolute inset-0 bg-black">
                     <img src="${getImg(card.file)}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/360x504/222/FFF?text=${card.name}'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent to-50%"></div>
                 </div>
+                
+                <button onclick="event.stopPropagation(); prepareShareImage()" class="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-amber-500/30 text-amber-500 hover:bg-amber-900/60 hover:text-white transition-all flex items-center justify-center group/share" title="Generate Share Card">
+                    <i class="fa-solid fa-share-nodes group-hover/share:scale-110 transition-transform"></i>
+                </button>
+
                 <div class="relative z-20 mt-auto p-8 pb-10 text-center">
                     <div class="mb-2">
                         <span class="text-4xl font-serif font-bold text-amber-500/80 drop-shadow-lg">${card.rank}</span>
@@ -492,18 +462,17 @@
 
         function closeModal() {
             modalOverlay.classList.add('hidden');
+            closeShareResult();
         }
 
         function initTilt(wrapper) {
             const card = wrapper.querySelector('.game-card');
             wrapper.addEventListener('mousemove', (e) => {
                 const rect = wrapper.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
                 const cx = rect.width / 2;
                 const cy = rect.height / 2;
-                const rx = ((y - cy) / cy) * -8; 
-                const ry = ((x - cx) / cx) * 8;
+                const rx = ((e.clientY - rect.top - cy) / cy) * -8; 
+                const ry = ((e.clientX - rect.left - cx) / cx) * 8;
                 card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.02)`;
             });
             wrapper.addEventListener('mouseleave', () => {
@@ -516,7 +485,97 @@
             else render(cards.filter(c => c.suit === type));
         }
 
+        // ==========================================
+        //  High-Res Generation using html2canvas
+        // ==========================================
+        
+        function prepareShareImage() {
+            if(!currentCardData) return;
+            rotateContainer.classList.add('paused');
+            
+            const card = currentCardData;
+            
+            // 填充隐藏模板的数据
+            const shareImgBg = document.getElementById('share-img-bg');
+            const shareName = document.getElementById('share-name');
+            const shareTitle = document.getElementById('share-title');
+            const shareDesc = document.getElementById('share-desc');
+            const qrContainer = document.getElementById('qrcode-target');
+
+            const imgPath = getImg(card.file);
+            const tempImg = new Image();
+            tempImg.src = imgPath;
+            
+            // 使用 background-image 确保 cover 效果完美
+            shareImgBg.style.backgroundImage = `url('${imgPath}')`;
+            
+            shareName.textContent = card.name;
+            shareTitle.textContent = card.title;
+            shareDesc.textContent = card.desc;
+
+            // 清空并重新生成二维码
+            qrContainer.innerHTML = ""; 
+            new QRCode(qrContainer, {
+                text: window.location.href,
+                width: 100,
+                height: 100,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // 确保图片加载后再截图
+            if (tempImg.complete) {
+                captureHighRes();
+            } else {
+                tempImg.onload = captureHighRes;
+                tempImg.onerror = captureHighRes; // 失败也尝试截图
+            }
+        }
+
+        function captureHighRes() {
+            const element = document.getElementById('share-card-render');
+            document.body.style.cursor = 'wait';
+
+            // 关键：Scale 2.0 配合巨大的 DOM 尺寸 = 超高清
+            html2canvas(element, {
+                backgroundColor: null,
+                scale: 2, 
+                useCORS: true, 
+                logging: false,
+                allowTaint: true 
+            }).then(canvas => {
+                document.body.style.cursor = 'default';
+                const imgUrl = canvas.toDataURL("image/png");
+                showShareResult(imgUrl);
+            }).catch(err => {
+                console.error("生成失败:", err);
+                document.body.style.cursor = 'default';
+                alert("Image generation failed. Please try again.");
+            });
+        }
+
+        function showShareResult(url) {
+            const container = document.getElementById('generated-image-container');
+            const overlay = document.getElementById('share-result-overlay');
+            const downloadLink = document.getElementById('download-link');
+
+            container.innerHTML = `<img src="${url}" class="h-full w-auto object-contain shadow-2xl border border-white/10 rounded-md">`;
+            
+            downloadLink.href = url;
+            downloadLink.download = `Mythos_${currentCardData.name}.png`;
+
+            overlay.classList.remove('hidden');
+        }
+
+        function closeShareResult() {
+            const overlay = document.getElementById('share-result-overlay');
+            overlay.classList.add('hidden');
+            rotateContainer.classList.remove('paused');
+        }
+
         render(cards);
+
     </script>
 </body>
 </html>
